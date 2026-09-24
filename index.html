@@ -34,6 +34,11 @@ body{font-family:Archivo,sans-serif;background:#060e1a;color:#fff;min-height:100
 .fv{font-size:14px;font-weight:600;color:rgba(255,255,255,0.65)}
 .fr{text-align:right}
 .ma{margin-top:16px;text-align:center;font-size:12px;color:rgba(255,255,255,0.35)}
+.dwg-btn{display:block;margin-top:12px;width:100%;padding:16px;border-radius:12px;border:2px solid #ff6b35;background:transparent;color:#ff6b35;font-family:Anton,sans-serif;font-size:1.1rem;letter-spacing:0.08em;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer;transition:all 0.2s}
+.dwg-btn:hover,.dwg-btn:active{background:#ff6b35;color:#fff}
+.dwg-off{border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.3);cursor:default}
+.dwg-off:hover,.dwg-off:active{background:transparent;color:rgba(255,255,255,0.3)}
+.dn{margin-top:8px;text-align:center;font-size:11px;color:rgba(255,255,255,0.3)}
 </style>
 </head>
 <body>
@@ -50,13 +55,20 @@ var wt = p.get("wt") || "3.71";
 var opt = p.get("opt") || "MS8036 STANDARD FORGE";
 var prog = p.get("prog") || "45886";
 var mach = p.get("mach") || "Esprit_Plasma";
+var dwg = p.get("dwg") || "";
 var now = new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-
+var db = "";
+if (dwg) {
+  db = '<a href="' + dwg + '" target="_blank" class="dwg-btn">View Drawing</a>';
+} else {
+  db = '<div class="dwg-btn dwg-off">View Drawing</div><div class="dn">Drawing link not yet configured</div>';
+}
 document.getElementById("app").innerHTML =
 '<div class="hdr"><div><div class="logo">Edge Innovate</div><div class="sub">Part Identification</div></div><div class="bg"><span class="dt"></span><span class="bt">SCANNED</span></div></div>' +
 '<div class="hero"><div class="hl">Part Number</div><div class="hv">' + pn + '</div></div>' +
 '<div class="cd"><div class="cl">Work Order</div><div class="cv">' + wo + '</div></div>' +
 '<div class="cd ay"><div class="cl">Assembly (Where does this go?)</div><div class="cv">' + assy + '</div></div>' +
+db +
 '<div class="gr"><div class="sc"><div class="sl">Material</div><div class="sr"><span class="sv">' + mat + '</span></div></div><div class="sc"><div class="sl">Thickness</div><div class="sr"><span class="sv">' + thk + '</span><span class="su">mm</span></div></div><div class="sc"><div class="sl">Function</div><div class="sr"><span class="sv">' + fn + '</span></div></div><div class="sc"><div class="sl">Weight</div><div class="sr"><span class="sv">' + wt + '</span><span class="su">kg</span></div></div></div>' +
 '<div class="cd"><div class="cl">Option / Machine Type</div><div class="cv">' + opt + '</div></div>' +
 '<div class="ft"><div><div class="fl">Program</div><div class="fv">' + prog + '</div></div><div class="fr"><div class="fl">Scanned</div><div class="fv">' + now + '</div></div></div>' +
