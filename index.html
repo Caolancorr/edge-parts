@@ -39,14 +39,18 @@ body{font-family:Archivo,sans-serif;background:#060e1a;color:#fff;min-height:100
 .dwg-off{border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.3);cursor:default}
 .dwg-off:hover,.dwg-off:active{background:transparent;color:rgba(255,255,255,0.3)}
 .dn{margin-top:8px;text-align:center;font-size:11px;color:rgba(255,255,255,0.3)}
+.qc{margin-top:12px;border-radius:12px;background:linear-gradient(135deg,#112035,#0f2744);padding:16px 20px;border:1px solid rgba(52,211,153,0.2)}
+.qv{font-family:Anton,sans-serif;font-size:2rem;color:#34d399;margin-top:4px}
 </style>
 </head>
 <body>
 <div class="wrap" id="app">Loading...</div>
 <script>
+var PDF_BASE = "";
 var p = new URLSearchParams(window.location.search);
 var pn = p.get("pn") || "175-30-201-23-R";
 var wo = p.get("wo") || "T44940";
+var qty = p.get("qty") || "";
 var assy = p.get("assy") || "BRETBY GUARD";
 var mat = p.get("mat") || "MS";
 var thk = p.get("thk") || "3";
@@ -57,16 +61,17 @@ var prog = p.get("prog") || "45886";
 var mach = p.get("mach") || "Esprit_Plasma";
 var dwg = p.get("dwg") || "";
 var now = new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+if (!dwg && PDF_BASE) { dwg = PDF_BASE + pn + ".pdf"; }
 var db = "";
-if (dwg) {
-  db = '<a href="' + dwg + '" target="_blank" class="dwg-btn">View Drawing</a>';
-} else {
-  db = '<div class="dwg-btn dwg-off">View Drawing</div><div class="dn">Drawing link not yet configured</div>';
-}
+if (dwg) { db = '<a href="' + dwg + '" target="_blank" class="dwg-btn">View Drawing</a>'; }
+else { db = '<div class="dwg-btn dwg-off">View Drawing</div><div class="dn">Drawing link not yet configured</div>'; }
+var qh = "";
+if (qty) { qh = '<div class="qc"><div class="cl">Qty Required</div><div class="qv">' + qty + '</div></div>'; }
 document.getElementById("app").innerHTML =
 '<div class="hdr"><div><div class="logo">Edge Innovate</div><div class="sub">Part Identification</div></div><div class="bg"><span class="dt"></span><span class="bt">SCANNED</span></div></div>' +
 '<div class="hero"><div class="hl">Part Number</div><div class="hv">' + pn + '</div></div>' +
 '<div class="cd"><div class="cl">Work Order</div><div class="cv">' + wo + '</div></div>' +
+qh +
 '<div class="cd ay"><div class="cl">Assembly (Where does this go?)</div><div class="cv">' + assy + '</div></div>' +
 db +
 '<div class="gr"><div class="sc"><div class="sl">Material</div><div class="sr"><span class="sv">' + mat + '</span></div></div><div class="sc"><div class="sl">Thickness</div><div class="sr"><span class="sv">' + thk + '</span><span class="su">mm</span></div></div><div class="sc"><div class="sl">Function</div><div class="sr"><span class="sv">' + fn + '</span></div></div><div class="sc"><div class="sl">Weight</div><div class="sr"><span class="sv">' + wt + '</span><span class="su">kg</span></div></div></div>' +
