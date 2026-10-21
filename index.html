@@ -15,9 +15,10 @@ body{font-family:Archivo,sans-serif;background:#060e1a;color:#fff;min-height:100
 .bg{display:flex;align-items:center;gap:8px;background:#112035;border-radius:50px;padding:6px 12px}
 .dt{width:8px;height:8px;border-radius:50%;background:#34d399}
 .bt{font-size:12px;font-weight:600;color:#34d399}
+.bg.bad .dt{background:#f87171}.bg.bad .bt{color:#f87171}
 .hero{margin-top:20px;border-radius:16px;background:linear-gradient(135deg,#ff6b35,#e55a28);padding:20px}
 .hl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.25em;color:rgba(255,255,255,0.7)}
-.hv{margin-top:6px;font-family:Anton,sans-serif;font-size:2.2rem;line-height:1;letter-spacing:0.05em}
+.hv{margin-top:6px;font-family:Anton,sans-serif;font-size:2.2rem;line-height:1;letter-spacing:0.05em;word-break:break-all}
 .cd{margin-top:12px;border-radius:12px;background:#0f2744;padding:16px 20px}
 .cl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.18em;color:rgba(255,255,255,0.55)}
 .cv{margin-top:4px;font-family:Anton,sans-serif;font-size:1.25rem}
@@ -41,43 +42,84 @@ body{font-family:Archivo,sans-serif;background:#060e1a;color:#fff;min-height:100
 .dn{margin-top:8px;text-align:center;font-size:11px;color:rgba(255,255,255,0.3)}
 .qc{margin-top:12px;border-radius:12px;background:linear-gradient(135deg,#112035,#0f2744);padding:16px 20px;border:1px solid rgba(52,211,153,0.2)}
 .qv{font-family:Anton,sans-serif;font-size:2rem;color:#34d399;margin-top:4px}
+.err{margin-top:12px;border-radius:12px;background:#3b1220;border:1px solid rgba(248,113,113,0.4);padding:16px 20px;color:#fca5a5;font-size:14px}
 </style>
 </head>
 <body>
 <div class="wrap" id="app">Loading...</div>
 <script>
+// ===== SETTINGS =====
+// Folder/URL where drawings live. Leave "" to only use the dwg column in parts.csv.
 var PDF_BASE = "";
+var MACHINE = "TruLaser 3080";
+// =====================
+
+// Code only needs to hold: ?pn=PARTNO&wo=WORKORDER&q=QTY&pg=PROGRAM  (wo/q/pg optional)
 var p = new URLSearchParams(window.location.search);
-var pn = p.get("pn") || "175-30-201-23-R";
-var wo = p.get("wo") || "T44940";
-var qty = p.get("qty") || "";
-var assy = p.get("assy") || "BRETBY GUARD";
-var mat = p.get("mat") || "MS";
-var thk = p.get("thk") || "3";
-var fn = p.get("fn") || "FOLD";
-var wt = p.get("wt") || "3.71";
-var opt = p.get("opt") || "MS8036 STANDARD FORGE";
-var prog = p.get("prog") || "45886";
-var mach = p.get("mach") || "Esprit_Plasma";
-var dwg = p.get("dwg") || "";
-var now = new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-if (!dwg && PDF_BASE) { dwg = PDF_BASE + pn + ".pdf"; }
-var db = "";
-if (dwg) { db = '<a href="' + dwg + '" target="_blank" class="dwg-btn">View Drawing</a>'; }
-else { db = '<div class="dwg-btn dwg-off">View Drawing</div><div class="dn">Drawing link not yet configured</div>'; }
-var qh = "";
-if (qty) { qh = '<div class="qc"><div class="cl">Qty Required</div><div class="qv">' + qty + '</div></div>'; }
-document.getElementById("app").innerHTML =
-'<div class="hdr"><div><div class="logo">Edge Innovate</div><div class="sub">Part Identification</div></div><div class="bg"><span class="dt"></span><span class="bt">SCANNED</span></div></div>' +
-'<div class="hero"><div class="hl">Part Number</div><div class="hv">' + pn + '</div></div>' +
-'<div class="cd"><div class="cl">Work Order</div><div class="cv">' + wo + '</div></div>' +
-qh +
-'<div class="cd ay"><div class="cl">Assembly (Where does this go?)</div><div class="cv">' + assy + '</div></div>' +
-db +
-'<div class="gr"><div class="sc"><div class="sl">Material</div><div class="sr"><span class="sv">' + mat + '</span></div></div><div class="sc"><div class="sl">Thickness</div><div class="sr"><span class="sv">' + thk + '</span><span class="su">mm</span></div></div><div class="sc"><div class="sl">Function</div><div class="sr"><span class="sv">' + fn + '</span></div></div><div class="sc"><div class="sl">Weight</div><div class="sr"><span class="sv">' + wt + '</span><span class="su">kg</span></div></div></div>' +
-'<div class="cd"><div class="cl">Option / Machine Type</div><div class="cv">' + opt + '</div></div>' +
-'<div class="ft"><div><div class="fl">Program</div><div class="fv">' + prog + '</div></div><div class="fr"><div class="fl">Scanned</div><div class="fv">' + now + '</div></div></div>' +
-'<div class="ma">' + mach + ' - Edge Innovate Manufacturing</div>';
+var pn = (p.get("pn") || "").trim().toUpperCase();
+var wo = p.get("wo") || "";
+var qty = p.get("q") || p.get("qty") || "";
+var prog = p.get("pg") || p.get("prog") || "";
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+
+function parseCSV(t){
+  var rows=[],row=[],f="",q=false;
+  t=t.replace(/^\uFEFF/,"");
+  for(var i=0;i<t.length;i++){
+    var c=t[i];
+    if(q){ if(c=='"'){ if(t[i+1]=='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c=='"') q=true;
+    else if(c==','){row.push(f);f="";}
+    else if(c=='\n'||c=='\r'){ if(c=='\r'&&t[i+1]=='\n')i++; row.push(f);f=""; if(row.join("")!=="")rows.push(row); row=[]; }
+    else f+=c;
+  }
+  row.push(f); if(row.join("")!=="")rows.push(row);
+  var h=rows.shift().map(function(x){return x.trim().toLowerCase();});
+  return rows.map(function(r){var o={};h.forEach(function(k,j){o[k]=(r[j]||"").trim();});return o;});
+}
+
+function header(ok){
+  return '<div class="hdr"><div><div class="logo">Edge Innovate</div><div class="sub">Part Identification</div></div>'+
+  '<div class="bg'+(ok?'':' bad')+'"><span class="dt"></span><span class="bt">'+(ok?'SCANNED':'NOT FOUND')+'</span></div></div>';
+}
+
+function render(part, msg){
+  var now=new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  var app=document.getElementById("app");
+  if(!part){
+    app.innerHTML=header(false)+
+      '<div class="hero"><div class="hl">Part Number</div><div class="hv">'+esc(pn||"NONE")+'</div></div>'+
+      '<div class="err">'+esc(msg)+'</div>'+
+      (wo?'<div class="cd"><div class="cl">Work Order</div><div class="cv">'+esc(wo)+'</div></div>':'');
+    return;
+  }
+  var dwg=part.dwg||(PDF_BASE?PDF_BASE+pn+".pdf":"");
+  var db=dwg?'<a href="'+esc(dwg)+'" target="_blank" class="dwg-btn">View Drawing</a>'
+            :'<div class="dwg-btn dwg-off">View Drawing</div><div class="dn">Drawing link not yet configured</div>';
+  var tile=function(l,v,u){return '<div class="sc"><div class="sl">'+l+'</div><div class="sr"><span class="sv">'+esc(v||"-")+'</span>'+(u&&v?'<span class="su">'+u+'</span>':'')+'</div></div>';};
+  app.innerHTML=header(true)+
+    '<div class="hero"><div class="hl">Part Number</div><div class="hv">'+esc(pn)+'</div></div>'+
+    (wo?'<div class="cd"><div class="cl">Work Order</div><div class="cv">'+esc(wo)+'</div></div>':'')+
+    (qty?'<div class="qc"><div class="cl">Qty Required</div><div class="qv">'+esc(qty)+'</div></div>':'')+
+    '<div class="cd ay"><div class="cl">Assembly (Where does this go?)</div><div class="cv">'+esc(part.assy||"-")+'</div></div>'+
+    db+
+    '<div class="gr">'+tile("Material",part.mat)+tile("Thickness",part.thk,"mm")+tile("Function",part.fn)+tile("Weight",part.wt,"kg")+'</div>'+
+    '<div class="cd"><div class="cl">Option / Machine Type</div><div class="cv">'+esc(part.opt||"-")+'</div></div>'+
+    '<div class="ft"><div><div class="fl">Program</div><div class="fv">'+esc(prog||"-")+'</div></div><div class="fr"><div class="fl">Scanned</div><div class="fv">'+now+'</div></div></div>'+
+    '<div class="ma">'+esc(MACHINE)+' - Edge Innovate Manufacturing</div>';
+}
+
+if(!pn){ render(null,"No part number in the code. Check the marking."); }
+else{
+  fetch("parts.csv?v="+Date.now()).then(function(r){if(!r.ok)throw 0;return r.text();})
+  .then(function(t){
+    var list=parseCSV(t), hit=null;
+    for(var i=0;i<list.length;i++){ if((list[i].pn||"").toUpperCase()===pn){hit=list[i];break;} }
+    render(hit, hit?"":"Part not in the parts list. Tell the office to add it.");
+  })
+  .catch(function(){ render(null,"Couldn't load the parts list. Check signal and try again."); });
+}
 </script>
 </body>
 </html>
